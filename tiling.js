@@ -32,7 +32,7 @@ const TILES = [
       </div>
       <div class="project-row">
         <h3>This Site</h3>
-        <p>Portfolio built with a BSP tiling layout — no frameworks, no libraries. Mathematically rendered hex grid background using the Canvas API.</p>
+        <p>Portfolio built with a BSP tiling layout — no frameworks, no libraries.</p>
         <div class="project-row-links">
           <a href="https://github.com/0utsights" target="_blank" rel="noopener noreferrer">Code ↗</a>
         </div>
@@ -79,12 +79,16 @@ class LeafNode {
 class SplitNode {
   constructor(direction) {
     this.type = 'split';
-    this.direction = direction;
+    this.direction = direction; // 'vertical' (left|right) or 'horizontal' (top|bottom)
     this.first = null;
     this.second = null;
     this.parent = null;
   }
 }
+
+// ── Mouse tracking ──
+const mouse = { x: 0, y: 0 };
+document.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
 
 // ── BSP manager ──
 const manager = {
@@ -93,9 +97,28 @@ const manager = {
   tileCount: 0,
   history: [],
 
-  getRectFor(leaf) {
-    const el = document.querySelector(`[data-leaf-id="${leaf.tileIndex}"]`);
-    return el ? el.getBoundingClientRect() : { width: window.innerWidth, height: window.innerHeight };
+  // Find which leaf the mouse is currently over
+  getLeafAtMouse() {
+    const el = document.elementFromPoint(mouse.x, mouse.y);
+    if (!el) return this.focusedLeaf;
+    const tile = el.closest('.bsp-tile');
+    if (!tile) return this.focusedLeaf;
+    return this.findLeafByIndex(this.root, parseInt(tile.dataset.leafId));
+  },
+
+  findLeafByIndex(node, index) {
+    if (!node) return null;
+    if (node.type === 'leaf') return node.tileIndex === index ? node : null;
+    return this.findLeafByIndex(node.first, index) || this.findLeafByIndex(node.second, index);
+  },
+
+  // Split direction alternates: first split vertical, children split horizontal, etc.
+  // Determined by depth of the target leaf in the tree
+  getDepth(leaf) {
+    let depth = 0;
+    let node = leaf;
+    while (node.parent) { depth++; node = node.parent; }
+    return depth;
   },
 
   addTile() {
@@ -111,24 +134,40 @@ const manager = {
       return;
     }
 
-    const focused = this.focusedLeaf;
-    const rect = this.getRectFor(focused);
-    const dir = rect.width >= rect.height ? 'vertical' : 'horizontal';
+    // Target the tile under the mouse
+    const target = this.getLeafAtMouse() || this.focusedLeaf;
+    const rect = document.querySelector(`[data-leaf-id="${target.tileIndex}"]`).getBoundingClientRect();
+
+    // Alternate split direction by depth: even depth = vertical, odd = horizontal
+    const depth = this.getDepth(target);
+    const dir = depth % 2 === 0 ? 'vertical' : 'horizontal';
+
+    // Determine if mouse is in first or second half of the tile
+    const mouseInSecondHalf = dir === 'vertical'
+      ? mouse.x > rect.left + rect.width / 2
+      : mouse.y > rect.top + rect.height / 2;
 
     const split = new SplitNode(dir);
-    split.parent = focused.parent;
+    split.parent = target.parent;
 
-    if (focused === this.root) {
+    if (target === this.root) {
       this.root = split;
     } else {
-      const p = focused.parent;
-      if (p.first === focused) p.first = split;
+      const p = target.parent;
+      if (p.first === target) p.first = split;
       else p.second = split;
     }
 
-    split.first = focused;
-    focused.parent = split;
-    split.second = newLeaf;
+    // Place new tile in the half the mouse is on
+    if (mouseInSecondHalf) {
+      split.first = target;
+      split.second = newLeaf;
+    } else {
+      split.first = newLeaf;
+      split.second = target;
+    }
+
+    target.parent = split;
     newLeaf.parent = split;
 
     this.focusedLeaf = newLeaf;
@@ -136,8 +175,18 @@ const manager = {
   },
 
   removeTile() {
-    if (!this.root || this.root.type === 'leaf') return;
+    // If only one tile left, go back to prompt
+    if (this.tileCount === 1) {
+      this.root = null;
+      this.focusedLeaf = null;
+      this.tileCount = 0;
+      this.history = [];
+      document.getElementById('tiles').classList.remove('active');
+      document.getElementById('prompt').style.display = '';
+      return;
+    }
 
+    // Pop history to find most recently focused valid leaf
     let target = null;
     while (this.history.length > 0) {
       const candidate = this.history.pop();
@@ -219,7 +268,7 @@ function updateHint() {
   if (manager.tileCount >= TILES.length) {
     hint.textContent = 'Press ↓ to close a tile';
   } else if (manager.tileCount > 1) {
-    hint.textContent = 'Press ↑ to open · ↓ to close · Click to focus';
+    hint.textContent = 'Press ↑ to open · ↓ to close';
   } else {
     hint.textContent = 'Press ↑ to open another tile';
   }
@@ -241,7 +290,7 @@ document.addEventListener('keydown', (e) => {
 
   if (e.key === 'ArrowDown') {
     e.preventDefault();
-    if (manager.tileCount > 1) {
+    if (manager.tileCount >= 1) {
       manager.removeTile();
       render();
     }
