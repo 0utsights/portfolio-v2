@@ -67,7 +67,8 @@ const NAMED_TILES = [
   }
 ];
 
-// Returns named tile content or a default placeholder for any index
+const TILES_PER_WORKSPACE = 4;
+
 function getTile(index) {
   if (index < NAMED_TILES.length) return NAMED_TILES[index];
   const n = index + 1;
@@ -81,8 +82,6 @@ function getTile(index) {
     `
   };
 }
-
-const TILES_PER_WORKSPACE = 4;
 
 // ── BSP nodes ──
 class LeafNode {
@@ -112,6 +111,7 @@ function createWorkspace() {
 const state = {
   workspaces: [createWorkspace()],
   activeIndex: 0,
+  autoMode: false,
   get ws() { return this.workspaces[this.activeIndex]; }
 };
 
@@ -162,14 +162,33 @@ function getLeafAtMouse(ws) {
   return findLeafByIndex(ws.root, parseInt(tile.dataset.leafId));
 }
 
-// Total tiles across all workspaces
 function totalTiles() {
   return state.workspaces.reduce((sum, ws) => sum + ws.tileCount, 0);
 }
 
+// ── Auto layout: pick the largest tile to split ──
+function getLargestLeaf(ws) {
+  let best = null, bestArea = -1;
+  function walk(node) {
+    if (!node) return;
+    if (node.type === 'leaf') {
+      const el = document.querySelector(`[data-leaf-id="${node.tileIndex}"]`);
+      if (el) {
+        const r = el.getBoundingClientRect();
+        const area = r.width * r.height;
+        if (area > bestArea) { bestArea = area; best = node; }
+      }
+      return;
+    }
+    walk(node.first);
+    walk(node.second);
+  }
+  walk(ws.root);
+  return best || ws.focusedLeaf;
+}
+
 // ── Add tile ──
 function addTile() {
-  // If current workspace is full, create a new one and switch to it
   if (state.ws.tileCount >= TILES_PER_WORKSPACE) {
     state.workspaces.push(createWorkspace());
     state.activeIndex = state.workspaces.length - 1;
@@ -177,7 +196,6 @@ function addTile() {
   }
 
   const ws = state.ws;
-  // Capture global index before incrementing tileCount
   const tileIndex = totalTiles();
   const newLeaf = new LeafNode(tileIndex);
   ws.tileCount++;
@@ -189,7 +207,12 @@ function addTile() {
     return;
   }
 
-  const target = getLeafAtMouse(ws) || ws.focusedLeaf;
+  // Auto mode: always split the largest tile down the middle
+  // Manual mode: split tile under mouse, new tile goes to whichever half the mouse is on
+  const target = state.autoMode
+    ? getLargestLeaf(ws)
+    : (getLeafAtMouse(ws) || ws.focusedLeaf);
+
   const el = document.querySelector(`[data-leaf-id="${target.tileIndex}"]`);
   const rect = el
     ? el.getBoundingClientRect()
@@ -197,9 +220,13 @@ function addTile() {
 
   const depth = getDepth(target);
   const dir = depth % 2 === 0 ? 'vertical' : 'horizontal';
-  const mouseInSecondHalf = dir === 'vertical'
-    ? mouse.x > rect.left + rect.width / 2
-    : mouse.y > rect.top + rect.height / 2;
+
+  // In auto mode new tile goes to second half; in manual it follows the mouse
+  const mouseInSecondHalf = state.autoMode
+    ? true
+    : (dir === 'vertical'
+        ? mouse.x > rect.left + rect.width / 2
+        : mouse.y > rect.top + rect.height / 2);
 
   const split = new SplitNode(dir);
   split.parent = target.parent;
@@ -227,6 +254,8 @@ function addTile() {
 }
 
 // ── Remove tile ──
+// Returns true if a full render() is still needed from the caller,
+// false if removeTile handled rendering itself (workspace switch).
 function removeTile() {
   const ws = state.ws;
 
@@ -237,15 +266,16 @@ function removeTile() {
     ws.history = [];
 
     if (state.activeIndex > 0) {
-      // Remove this workspace and switch back — render() will pick up the new activeIndex
       state.workspaces.splice(state.activeIndex, 1);
       state.activeIndex = state.workspaces.length - 1;
       showIndicator();
+      render(); // render the previous workspace immediately
+      return false; // tell caller not to render again
     } else {
       document.getElementById('tiles').classList.remove('active');
       document.getElementById('prompt').style.display = '';
+      return false;
     }
-    return;
   }
 
   let target = null;
@@ -253,7 +283,7 @@ function removeTile() {
     const candidate = ws.history.pop();
     if (findLeaf(ws.root, candidate)) { target = candidate; break; }
   }
-  if (!target) return;
+  if (!target) return true;
 
   const parent = target.parent;
   const sibling = parent.first === target ? parent.second : parent.first;
@@ -269,6 +299,7 @@ function removeTile() {
 
   ws.focusedLeaf = sibling.type === 'leaf' ? sibling : firstLeaf(sibling);
   ws.tileCount--;
+  return true;
 }
 
 // ── Switch workspace ──
@@ -320,11 +351,18 @@ function updateHint() {
   const ws = state.ws;
   if (ws.tileCount === 0 && state.activeIndex === 0) { hint.classList.remove('visible'); return; }
   hint.classList.add('visible');
-
   const parts = ['↑ open', '↓ close'];
   if (state.workspaces.length > 1) parts.push('← → switch');
   hint.textContent = parts.join(' · ');
 }
+
+// ── Toggle button ──
+const toggleBtn = document.getElementById('mode-toggle');
+toggleBtn.addEventListener('click', () => {
+  state.autoMode = !state.autoMode;
+  toggleBtn.textContent = state.autoMode ? 'Mode: Auto' : 'Mode: Manual';
+  toggleBtn.classList.toggle('active', state.autoMode);
+});
 
 // ── Input ──
 document.addEventListener('keydown', (e) => {
@@ -341,8 +379,8 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowDown') {
     e.preventDefault();
     if (state.ws.tileCount >= 1) {
-      removeTile();
-      render();
+      const needsRender = removeTile();
+      if (needsRender) render();
     }
   }
 
