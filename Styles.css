@@ -1,0 +1,209 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #f5f3ef;
+  color: #1a1a1a;
+  font-family: "Space Grotesk", sans-serif;
+}
+
+/* ── Prompt ── */
+#prompt {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #f5f3ef;
+  z-index: 10;
+}
+
+#prompt h1 {
+  font-size: 1.4rem;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+#prompt p {
+  font-size: 0.8rem;
+  color: rgba(0,0,0,0.3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+kbd {
+  display: inline-block;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.15);
+  border-radius: 5px;
+  padding: 1px 7px;
+  font-family: inherit;
+  font-size: 0.78rem;
+  color: #333;
+}
+
+/* ── Tile container ── */
+#tiles {
+  width: 100vw;
+  height: 100vh;
+  display: none;
+}
+
+#tiles.active {
+  display: flex;
+}
+
+/* ── BSP nodes ── */
+.bsp-split {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.bsp-split.vertical   { flex-direction: row; }
+.bsp-split.horizontal { flex-direction: column; }
+
+.bsp-tile {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: #f5f3ef;
+  cursor: pointer;
+}
+
+.bsp-tile.focused {
+  border-color: rgba(0,0,0,0.2);
+}
+
+.bsp-tile .tile-inner {
+  position: absolute;
+  inset: 0;
+  padding: 28px 32px;
+  overflow-y: auto;
+}
+
+/* ── Tile content ── */
+.tile-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(0,0,0,0.3);
+  margin-bottom: 14px;
+}
+
+.tile-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+
+.tile-subtitle {
+  font-size: 0.85rem;
+  color: rgba(0,0,0,0.4);
+  margin-bottom: 20px;
+}
+
+.tile-body {
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: rgba(0,0,0,0.65);
+}
+
+.tile-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.tile-links a {
+  font-size: 0.82rem;
+  color: rgba(0,0,0,0.35);
+  text-decoration: none;
+}
+
+.tile-links a:hover { color: #1a1a1a; }
+
+/* ── Project rows ── */
+.project-row {
+  padding: 14px 0;
+  border-top: 1px solid rgba(0,0,0,0.07);
+}
+
+.project-row:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.project-row h3 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.project-row p {
+  font-size: 0.82rem;
+  color: rgba(0,0,0,0.5);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.project-row-links {
+  display: flex;
+  gap: 12px;
+}
+
+.project-row-links a {
+  font-size: 0.78rem;
+  color: rgba(0,0,0,0.3);
+  text-decoration: none;
+}
+
+.project-row-links a:hover { color: #1a1a1a; }
+
+/* ── Stack tags ── */
+.stack-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.stack-tag {
+  font-size: 0.75rem;
+  color: rgba(0,0,0,0.45);
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 5px;
+  padding: 3px 9px;
+}
+
+/* ── Hint bar ── */
+#hint {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.72rem;
+  color: rgba(0,0,0,0.3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  pointer-events: none;
+  display: none;
+  white-space: nowrap;
+}
+
+#hint.visible { display: block; }
