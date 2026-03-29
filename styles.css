@@ -52,6 +52,24 @@ kbd {
   color: #333;
 }
 
+#mode-toggle {
+  margin-top: 12px;
+  background: none;
+  border: 1px solid rgba(0,0,0,0.15);
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-family: inherit;
+  font-size: 0.78rem;
+  color: rgba(0,0,0,0.4);
+  cursor: pointer;
+  letter-spacing: 0.04em;
+}
+
+#mode-toggle.active {
+  border-color: rgba(0,0,0,0.4);
+  color: #1a1a1a;
+}
+
 /* ── Tile container ── */
 #tiles {
   width: 100vw;
@@ -190,6 +208,24 @@ kbd {
   border-radius: 5px;
   padding: 3px 9px;
 }
+
+/* ── Workspace indicator ── */
+#ws-indicator {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: rgba(0,0,0,0.5);
+  letter-spacing: 0.1em;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 100;
+}
+
+#ws-indicator.visible { opacity: 1; }
 
 /* ── Hint bar ── */
 #hint {
