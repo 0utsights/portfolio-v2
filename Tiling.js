@@ -1,4 +1,4 @@
-/ ── Tile content ──
+// ── Tile content ──
 const TILES = [
   {
     id: 'hero',
@@ -30,7 +30,7 @@ const TILES = [
           <a href="https://aeyori.com" target="_blank" rel="noopener noreferrer">Live ↗</a>
         </div>
       </div>
-      <div class="project-row>
+      <div class="project-row">
         <h3>This Site</h3>
         <p>Portfolio built with a BSP tiling layout — no frameworks, no libraries. Mathematically rendered hex grid background using the Canvas API.</p>
         <div class="project-row-links">
